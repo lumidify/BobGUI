@@ -16,7 +16,7 @@ class Button(Widget.Widget):
 
         self.padding = kwargs.get("padding", [0, 0, 0, 0])
         keep_aspect_ratio = kwargs.get("keep_aspect_ratio", False)
-        self.font = pygame.font.Font(os.path.join("..", "..", "font", "Lumidify_Casual.ttf"), 30)
+        self.font = pygame.font.Font(os.path.join("Lumidify_Casual.ttf"), 30)
         self.normal_image = ScaledImage(self.screen, os.path.join("button.png"), keep_aspect_ratio=keep_aspect_ratio)
         self.highlighted_image = ScaledImage(self.screen, os.path.join("button_highlighted.png"), keep_aspect_ratio=keep_aspect_ratio)
         self.pressed_image = ScaledImage(self.screen, os.path.join("button_pressed.png"), keep_aspect_ratio=keep_aspect_ratio)
