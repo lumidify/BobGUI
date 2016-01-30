@@ -1,0 +1,12 @@
+<markup>
+    <object onclick="hello" style="color: (0, 0, ); position: absolute;">
+        Yo, what's up?
+    </object>
+    <div>
+        <object>
+            My name is Bob!
+            <object>Hi!</object>
+        </object>
+        <object>Yo again!</object>
+    </div>
+</markup>
