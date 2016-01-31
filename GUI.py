@@ -26,6 +26,7 @@ import sys
 import GridFrame
 import Button
 import pygame
+from Label import Label
 from Grid import Grid
 from Flow import Flow
 from Place import Place
@@ -95,7 +96,7 @@ a = GridFrame.GridFrame(root)
 a.grid(row=0, column=0, sticky="nswe")
 root.config_column(0, weight=1)
 root.config_row(0, weight=1)
-b = Button.Button(a, text="Hi! This is a button!", command=sys.exit, padding=[10, 10, 10, 10])
+b = Label(a, text="Hi! This is a label!", padding=[10, 10, 10, 10], fontsize=50, color=(150, 150, 0))
 b.grid(row=0, column=0)
 a.config_column(0, weight=1)
 a.config_row(0, weight=1)

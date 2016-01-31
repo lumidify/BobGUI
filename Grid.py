@@ -185,10 +185,13 @@ class Grid():
                 widget.rect.centerx = widget.bounding_rect.centerx
         else:
             widget.rect.center = widget.bounding_rect.center
+        """
+        To prevent widgets from going past the left and top borders of their columns and rows.
         if widget.rect.left < widget.bounding_rect.left:
             widget.rect.left = widget.bounding_rect.left
         if widget.rect.top < widget.bounding_rect.top:
             widget.rect.top = widget.bounding_rect.top
+        """
         widget.resize()
         widget.calculate_pos()
     def update(self, **kwargs):

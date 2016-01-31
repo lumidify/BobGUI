@@ -20,3 +20,32 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
+
+import os
+import sys
+import pygame
+from pygame.locals import *
+from BasicText import BasicText
+
+class MultilineText():
+    def __init__(self, screen, **kwargs):
+        self.screen = screen
+        self.text = kwargs.get("text", "")
+        self.lines = self.text.splitlines()
+        self.final_lines = []
+        for line in self.lines:
+            kwargs.update({"text": line})
+            self.final_lines.append(BasicText(self.screen, **kwargs))
+    def draw(self):
+        y = 0
+        for line in self.final_lines:
+            line.draw((0, y))
+            y += line.height
+
+pygame.init()
+screen = pygame.display.set_mode((0, 0))
+text = MultilineText(screen, text="Hk:js;ldkfj;sdlkj;lkjjjsdfklaioaioweruiawopsdmnmm,xcvm,.xnvxcnm,vnxm,nm,nm,.sdm,fsdjf\nssdfsdfsdadf\\nsfsdasffsssdfssdddfsdfsdfsdfsdfsdffffffffffffffffff\nsssssssssssssssssssssssssssssssdfdjklkjla;kjsd;lfjklsdjfklsdjlfjklsal;sdlfkj", fontsize=50, color=(255, 10, 100))
+while True:
+    screen.fill((255, 255, 255))
+    text.draw()
+    pygame.display.update()

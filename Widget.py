@@ -4,6 +4,8 @@ class Widget():
         self.screen = self.parent.screen
     def update_screen(self, screen):
         self.screen = screen
+    def update(self, **kwargs):
+        pass
     def resize(self):
         pass
     def calculate_pos(self):

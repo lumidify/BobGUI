@@ -59,12 +59,9 @@ class BasicText():
         self.gen_surf()
     def load_font(self):
         try:
-            self.font = pygame.font.SysFont(self.font, self.fontsize)
+            self.font = pygame.font.Font(self.font, self.fontsize)
         except:
-            try:
-                self.font = pygame.font.Font(self.font, self.fontsize)
-            except:
-                self.font = pygame.font.SysFont(None, self.fontsize)
+            self.font = pygame.font.SysFont(self.font, self.fontsize)
         self.font.set_underline(self.underline)
         self.font.set_bold(self.bold)
         self.font.set_italic(self.italic)
@@ -94,13 +91,13 @@ class BasicText():
             if self.word_spacing and letter == " ":
                 extra += self.word_spacing
             self.size_list.append(self.font.size(self.text[:index + 1])[0] + extra)
-    def draw(self):
-        self.screen.blit(self.textsurf, (0, 0))
+    def draw(self, pos):
+        self.screen.blit(self.textsurf, pos)
 
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((1366, 768))
-    text = BasicText(screen, text="Hello, World!", color=(255, 0, 100), fontsize=50, word_spacing=50)
+    text = BasicText(screen, text="Hello, World!", color=(255, 0, 100), fontsize=50, letter_spacing=50, underline=True)
     while True:
         screen.fill((255, 255, 255))
         for event in pygame.event.get():
