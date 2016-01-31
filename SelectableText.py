@@ -1,8 +1,31 @@
+"""
+BobGUI 1.0
+Copyright © 2016 Lumidify Productions
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import os
 import sys
 import pygame
-from pygame.locals import *
 from Text import Text
+from pygame.locals import *
 from helper_functions import calc_size_list, get_index, refine_index, textwrap
 
 SHIFT = 0b1
@@ -19,7 +42,7 @@ class SelectableText():
         self.text = text
         self.font = font
         self.pos = pos
-        self.cursor_image = pygame.image.load(os.path.join("..", "..", "images", "text_cursor.png")).convert_alpha()
+        self.cursor_image = pygame.image.load(os.path.join("images", "text_cursor.png")).convert_alpha()
         self.cursor_image = pygame.transform.smoothscale(self.cursor_image, (24, 24))
         self.x1 = None
         self.x2 = None
@@ -187,7 +210,7 @@ class SelectableText():
             pygame.mouse.set_visible(True)
 if __name__ == "__main__":
     pygame.init()
-    font = pygame.font.Font(os.path.join("..", "..", "font", "Lumidify_Casual.ttf"), 40)
+    font = pygame.font.Font(os.path.join("Lumidify_Casual.ttf"), 20)
     screen = pygame.display.set_mode((500, 500))
     test = SelectableText(screen, "Hello, how are you? I'm fine!\nI hope you are fine too!\nI don't know what else to say.\nThis is another line!\nWow, this is amazing, isn't it?\nI love writing random stuff!", font, [0, 0])
     clock = pygame.time.Clock()
