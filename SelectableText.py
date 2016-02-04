@@ -1,5 +1,5 @@
 """
-BobGUI 1.0
+This file is part of BobGUI
 Copyright © 2016 Lumidify Productions
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -25,9 +25,9 @@ import os
 import sys
 import pygame
 from pygame.locals import *
-from BasicText import BasicText
+from MultilineText import MultilineText
 
 class SelectableText():
     def __init__(self, screen, **kwargs):
         self.screen = screen
-        self.text = kwargs.get("text", "")
+        self.text = MultilineText(screen, **kwargs)

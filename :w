@@ -44,11 +44,9 @@ def split(text, delimiter=" "):
         final_list.append("".join(temp_list))
     return final_list
 #TODO: Only rerender from point of insertion
-#TODO: Justify text
 class Line():
     def __init__(self, screen, **kwargs):
         self.screen = screen
-        self.wrap = kwargs.get("wrap", True)
         self.antialias = kwargs.get("antialias", True)
         self.italic = kwargs.get("italic", False)
         self.bold = kwargs.get("bold", False)
@@ -59,22 +57,13 @@ class Line():
         self.text = kwargs.get("text", "")
         self.font = kwargs.get("font", None)
         self.fontsize = kwargs.get("fontsize", 20)
-        self.align = kwargs.get("align", "left")
-        self.shadow = kwargs.get("shadow", False)
-        self.shadow_color = kwargs.get("shadow_color", (150, 150, 150))
-        self.shadow_offsetx = kwargs.get("shadow_offsetx", 2)
-        self.shadow_offsety = kwargs.get("shadow_offsety", 2)
         self.size_list = [0]
-        self.load_font()
-        self.height = self.font.get_height()
+        self.height = 0
         self.text_splits = []
-        self.width = 0
+        self.load_font()
+        self.height = self.font.size(self.text)[1]
         self.gen_surf()
-    def resize(self, **kwargs):
-        self.width = kwargs.get("width", self.width)
-        if self.wrap:
-            self.wrap_text()
-    def wrap_text(self):
+    def wrap(self, max_width):
         self.text_splits = []
         current_width = 0
         current_total_width = 0
@@ -84,7 +73,7 @@ class Line():
             letter_index += len(word)
             width_change = self.size_list[letter_index] - current_total_width
             current_total_width += width_change
-            if current_width + width_change > self.width:
+            if current_width + width_change > max_width:
                 current_width = 0
                 #Skip over the spaces which are used for wrapping
                 #Otherwise the spaces which span over two lines would still be visible,
@@ -106,66 +95,40 @@ class Line():
         self.font.set_bold(self.bold)
         self.font.set_italic(self.italic)
     def gen_surf(self, startindex=0):
-        #TODO: Maybe create separate functions for creating different effects
-        #so that it is easy to add new effects.
-        #FIXME: Underlines are currently broken when letter or word spacing is set.
         self.gen_size_list(startindex)
         startpos = self.size_list[startindex]
-        self.textsurf = pygame.surface.Surface((self.size_list[-1], self.height)).convert_alpha()
-        self.textsurf.fill((0, 0, 0, 0))
-        if self.shadow:
-            self.shadowsurf = pygame.surface.Surface((self.size_list[-1], self.height)).convert_alpha()
-            self.shadowsurf.fill((0, 0, 0, 0))
         if self.letter_spacing:
+            self.textsurf = pygame.surface.Surface((self.size_list[-1], self.height)).convert_alpha()
+            self.textsurf.fill((0, 0, 0, 0))
             for index, letter in enumerate(self.text):
-                if self.shadow:
-                    self.shadowsurf.blit(self.font.render(letter, self.antialias, self.shadow_color), (self.size_list[index], 0))
                 self.textsurf.blit(self.font.render(letter, self.antialias, self.color), (self.size_list[index], 0))
         elif self.word_spacing:
+            self.textsurf = pygame.surface.Surface((self.size_list[-1], self.height)).convert_alpha()
+            self.textsurf.fill((0, 0, 0, 0))
             index = 0
             for word in split(self.text):
-                if self.shadow:
-                    self.shadowsurf.blit(self.font.render(word, self.antialias, self.shadow_color), (self.size_list[index], 0))
                 self.textsurf.blit(self.font.render(word, self.antialias, self.color), (self.size_list[index], 0))
                 index += len(word)
         else:
-            if self.shadow:
-                self.shadowsurf.blit(self.font.render(self.text, self.antialias, self.shadow_color), (0, 0))
-            self.textsurf.blit(self.font.render(self.text, self.antialias, self.color), (0, 0))
+            self.textsurf = self.font.render(self.text, self.antialias, self.color)
     def gen_size_list(self, startindex=0):
         extra = 0
         self.size_list = self.size_list[:startindex + 1]
+        startpos = self.size_list[-1]
         for index, letter in enumerate(self.text[startindex:]):
             #FIXME: Should letter_spacing affect spaces or not?
-            if self.letter_spacing:
+            if self.letter_spacing and letter != " ":
                 extra += self.letter_spacing
             if self.word_spacing and letter == " ":
                 extra += self.word_spacing
-            self.size_list.append(self.font.size(self.text[:index + startindex + 1])[0] + extra)
+            self.size_list.append(self.font.size(self.text[:index + startindex + 1])[0] + extra + startpos)
     def draw(self, **kwargs):
         y = kwargs.get("y", 0)
         x = kwargs.get("x", 0)
-        if self.wrap:
-            for split in self.text_splits:
-                width = self.size_list[split[1]] - self.size_list[split[0]]
-                extra = 0
-                if self.align == "center":
-                    extra = (self.width - width) // 2
-                elif self.align == "right":
-                    extra = self.width - width
-                if self.shadow:
-                    self.screen.blit(self.shadowsurf, (x + extra + self.shadow_offsetx, y + self.shadow_offsety), (self.size_list[split[0]], 0, width, self.height))
-                self.screen.blit(self.textsurf, (x + extra, y), (self.size_list[split[0]], 0, width, self.height))
-                y += self.height
-        else:
-            extra = 0
-            if self.align == "center":
-                extra = (self.width - self.size_list[-1]) // 2
-            elif self.align == "right":
-                extra = self.width - self.size_list[-1]
-            if self.shadow:
-                self.screen.blit(self.shadowsurf, (x + extra + self.shadow_offsetx, y + shadow_offsety))
-            self.screen.blit(self.textsurf, (x + extra, y))
+        for split in self.text_splits:
+            self.screen.blit(self.textsurf, (x, y), (self.size_list[split[0]], 0, self.size_list[split[1]] - self.size_list[split[0]], self.height))
+            y += self.height
+
 
 class MultilineText():
     def __init__(self, screen, **kwargs):
@@ -178,18 +141,20 @@ class MultilineText():
         self.textsurface.fill((0, 0, 0, 0))
         self.offsetx = 0
         self.final_lines = []
-        #TODO: Add special handler for empty lines so no extra processing power is used
-        #creating empty Line objects.
         for line in self.lines:
             kwargs.update({"text": line})
             self.final_lines.append(Line(self.textsurface, **kwargs))
+        if self.wrap:
+            self.wrap_text()
     def resize(self, size):
         self.rect.size = size
         self.textsurface = pygame.surface.Surface(size).convert_alpha()
         self.textsurface.fill((0, 0, 0, 0))
         for line in self.final_lines:
             line.screen = self.textsurface
-            line.resize(width=self.rect.width)
+    def wrap_text(self):
+        for line in self.final_lines:
+            line.wrap(self.rect.width)
     def draw(self):
         self.textsurface.fill((0, 0, 0, 0))
         y = 0
@@ -197,17 +162,18 @@ class MultilineText():
             line.draw(x=self.rect.x, y=y)
             y += len(line.text_splits) * line.height
         self.screen.blit(self.textsurface, self.rect)
-if __name__ == "__main__":
-    pygame.init()
-    screen = pygame.display.set_mode((0, 0), RESIZABLE)
-    text = MultilineText(screen, text="Hello! This is an amazing demo.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", width=1000, height=700, wrap=True, font="liberationserif", align="center", shadow=True, fontsize=22)
-    while True:
-        screen.fill((255, 255, 255))
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == VIDEORESIZE:
-                text.resize(event.dict["size"])
-        text.draw()
-        pygame.display.update()
+
+pygame.init()
+screen = pygame.display.set_mode((0, 0), RESIZABLE)
+text = MultilineText(screen, text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", width=1000, height=700, wrap=True, font="dejavusans")
+while True:
+    screen.fill((255, 255, 255))
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == VIDEORESIZE:
+            text.resize(event.dict["size"])
+            text.wrap_text()
+    text.draw()
+    pygame.display.update()

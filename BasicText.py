@@ -1,5 +1,5 @@
 """
-BobGUI 1.0
+This file is part of BobGUI 1.0
 Copyright © 2016 Lumidify Productions
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -57,6 +57,7 @@ class BasicText():
         self.height = 0
         self.load_font()
         self.gen_surf()
+        self.split_surfaces = []
     def load_font(self):
         try:
             self.font = pygame.font.Font(self.font, self.fontsize)
@@ -81,6 +82,7 @@ class BasicText():
                 index += len(word)
         else:
             self.textsurf = self.font.render(self.text, True, self.color)
+        self.split_surfaces = [self.textsurf]
     def gen_size_list(self):
         extra = 0
         self.size_list = [0]
@@ -91,18 +93,25 @@ class BasicText():
             if self.word_spacing and letter == " ":
                 extra += self.word_spacing
             self.size_list.append(self.font.size(self.text[:index + 1])[0] + extra)
-    def draw(self, pos):
-        self.screen.blit(self.textsurf, pos)
+    def split(self, indeces):
+        self.split_surfaces = []
+        for index_index, index in enumerate(indeces):
+            if index_index == 0:
+                temp_surf = pygame.surface.Surface((self.size_list[index], self.height)).convert_alpha()
+                temp_surf.fill((0, 0, 0, 0))
+                temp_surf.blit(self.textsurf, (0, 0), (0, 0, self.size_list[index], self.height))
+            else:
+                temp_surf = pygame.surface.Surface((self.size_list[index] - self.size_list[indeces[index_index - 1]], self.height)).convert_alpha()
+                temp_surf.fill((0, 0, 0, 0))
+                temp_surf.blit(self.textsurf, (0, 0), (self.size_list[indeces[index_index - 1]], 0, self.size_list[index] - self.size_list[indeces[index_index - 1]], self.height))
+            self.split_surfaces.append(temp_surf)
+    def draw(self, **kwargs):
+        y = kwargs.get("y", 0)
+        x = kwargs.get("x", 0)
+        splits = kwargs.get("indeces", [])
+        current_pos = 0
+        for split in splits:
+            self.screen.blit(self.textsurf, (x, y), (current_pos, 0, self.size_list[split] - current_pos, self.height))
+            current_pos += self.size_list[split] - current_pos
+            y += self.height
 
-if __name__ == "__main__":
-    pygame.init()
-    screen = pygame.display.set_mode((1366, 768))
-    text = BasicText(screen, text="Hello, World!", color=(255, 0, 100), fontsize=50, letter_spacing=50, underline=True)
-    while True:
-        screen.fill((255, 255, 255))
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                pygame.quit()
-                sys.exit()
-        text.draw()
-        pygame.display.update()
