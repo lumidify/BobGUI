@@ -1,5 +1,5 @@
 """
-BobGUI 1.0
+This file is part of BobGUI
 Copyright © 2016 Lumidify Productions
 
 Permission is hereby granted, free of charge, to any person obtaining
