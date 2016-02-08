@@ -1,5 +1,5 @@
 """
-BobGUI 1.0
+This file is part of BobGUI
 Copyright © 2016 Lumidify Productions
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -28,22 +28,19 @@ from Cursor import Cursor
 from pygame.locals import *
 from SelectableText import SelectableText
 
-class TextInput():
-    def __init__(self, screen, position, dimensions, command=None):
-        self.screen = screen
-        self.x = position[0]
-        self.y = position[1]
-        self.width = dimensions[0]
-        self.height = dimensions[1]
-        self.rect = Rect((self.x, self.y), (self.width, self.height))
-        self.command = command
-        self.message = []
-        self.font = pygame.font.Font(os.path.join("Lumidify_Casual.ttf"), 20)
-        self.text = SelectableText(screen, "", self.font, [5, 5])
+class TextInput(SelectableText):
+    def __init__(self, screen, **kwargs):
+        super().__init__(screen, **kwargs)
+        self.rect = Rect(0, 0, kwargs.get("height", 0), kwargs.get("width", 0))
+        self.multiline = kwargs.get("multiline", True)
+        self.cursor = Cursor(height=self.textheight)
         self.focused = False
         self.highlighted = False
-        self.cursor = Cursor("|", 0, 700, 500)
-    def update(self, event):
+    def update(self, event=None):
+        super().update(event)
+        if not None in [self.x2, self.y2]:
+            self.cursor.x_index = self.x2
+            self.cursor.y_index = self.y2
         significant_event = False
         mouse_pos = pygame.mouse.get_pos()
         if event.type == MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(mouse_pos):
@@ -53,6 +50,8 @@ class TextInput():
             self.focused = False
             self.cursor.stop()
         elif event.type == MOUSEMOTION:
+            if self.pressed:
+                significant_event = True
             if self.rect.collidepoint(mouse_pos):
                 self.highlighted = True
             else:
@@ -60,28 +59,68 @@ class TextInput():
         elif event.type == KEYDOWN and self.focused:
             significant_event = True
             if event.key == K_BACKSPACE:
-                if self.cursor.pos > 0:
-                    self.message.pop(self.cursor.pos - 1)
-                    self.cursor.pos -= 1
+                new_indeces = self.delete_selection()
+                if not new_indeces:
+                    self.cursor.x_index -= 1
+                    if self.cursor.x_index < 0:
+                        if self.cursor.y_index > 0:
+                            self.delete_line(self.cursor.y_index)
+                            self.cursor.y_index -= 1
+                            self.cursor.x_index = len(self.final_lines[self.cursor.y_index].text)
+                        else:
+                            self.cursor.x_index = 0
+                    else:
+                        self.delete((self.cursor.x_index, self.cursor.y_index))
+                else:
+                    self.cursor.x_index, self.cursor.y_index = new_indeces
             elif event.key == K_DELETE:
-                if self.cursor.pos < len(self.message):
-                    self.message.pop(self.cursor.pos)
+                new_indeces = self.delete_selection()
+                if not new_indeces:
+                    if self.cursor.x_index < len(self.final_lines[self.cursor.y_index].text):
+                        self.delete((self.cursor.x_index, self.cursor.y_index))
+                    else:
+                        if self.cursor.y_index < len(self.final_lines) - 1:
+                            self.join_lines(self.cursor.x_index, self.cursor.y_index + 1)
+                else:
+                    self.cursor.x_index, self.cursor.y_index = new_indeces
             elif event.key == K_RETURN:
-                if self.command != None:
-                    self.command()
+                if self.multiline:
+                    new_indeces = self.delete_selection()
+                    if new_indeces:
+                        self.cursor.x_index, self.cursor.y_index = new_indeces
+                    self.split_line((self.cursor.x_index, self.cursor.y_index))
+                    self.cursor.x_index = 0
+                    self.cursor.y_index += 1
+            elif event.key == K_UP:
+                pos = self.get_index_pos((self.cursor.x_index, self.cursor.y_index))
+                self.cursor.x_index, self.cursor.y_index = self.get_nearest_index((pos[0], pos[1] - self.textheight))
+            elif event.key == K_DOWN:
+                pos = self.get_index_pos((self.cursor.x_index, self.cursor.y_index))
+                self.cursor.x_index, self.cursor.y_index = self.get_nearest_index((pos[0], pos[1] + self.lineheight))
             elif event.key == K_LEFT:
-                if self.cursor.pos > 0:
-                    self.cursor.pos -= 1
+                if self.cursor.x_index > 0:
+                    self.cursor.x_index -= 1
+                elif self.cursor.y_index > 0:
+                    self.cursor.y_index -= 1
+                    self.cursor.x_index = len(self.final_lines[self.cursor.y_index].text)
             elif event.key == K_RIGHT:
-                if self.cursor.pos < len(self.message):
-                    self.cursor.pos += 1
+                if self.cursor.x_index < len(self.final_lines[self.cursor.y_index].text):
+                    self.cursor.x_index += 1
+                elif self.cursor.y_index < len(self.final_lines) - 1:
+                    self.cursor.y_index += 1
+                    self.cursor.x_index = 0
             else:
-                self.message.insert(self.cursor.pos, event.unicode)
-                self.cursor.pos += 1
+                new_indeces = self.delete_selection()
+                if new_indeces:
+                    self.cursor.x_index, self.cursor.y_index = new_indeces
+                character = event.unicode
+                if len(character) > 0:
+                    self.select_none()
+                    self.insert((self.cursor.x_index, self.cursor.y_index), character)
+                    self.cursor.x_index += 1
         if significant_event:
             self.cursor.event()
         self.change_color()
-        self.text.update(event)
     def change_color(self):
         if self.highlighted:
             self.color = (0, 0, 200)
@@ -90,24 +129,17 @@ class TextInput():
         else:
             self.color = (0, 0, 100)
     def draw(self):
-        self.text.change_text("".join(self.message))
         self.cursor.update()
-        self.before_cursor_width = self.font.size("".join(self.message[:self.cursor.pos]))[0]
-        self.text_width, self.text_height = self.font.size(self.text.text)
-        #self.screen.blit(self.font.render(self.text, 1, (255, 255, 255)), (self.x + 5, self.y + (self.height - self.text_height)//2))
-        if self.cursor.visible:
-            self.screen.blit(self.font.render(self.cursor.string, 1, (255, 255, 255)), (self.x + 5 + self.before_cursor_width, self.y + (self.height - self.text_height)//2))
         pygame.draw.rect(self.screen, self.color, self.rect, 2)
-        self.text.draw()
+        super().draw()
+        self.cursor.draw(self.screen, self.get_index_pos((self.cursor.x_index, self.cursor.y_index)))
 if __name__ == "__main__":
     pygame.init()
     pygame.key.set_repeat(500, 20)
     screen = pygame.display.set_mode((500, 500))
-    clock = pygame.time.Clock()
-    gui = [TextInput(screen, [0, 0], [200, 30])]
+    gui = [TextInput(screen, width=500, height=500, text="Hello, how are you?dsfjsdafsdkl;fjsdlafjkasd;lfjs;lfj; sdfjksdl;jf dfsdfj safljsdfj sdfkjsdl sdjfsdklfjas jfj klajsdfklja lfdj sdfa kjdlsf\nsfsdfkshdfjklshka fhsdk dfj asdfhklh kfhasdfkj", align="center")]
     while True:
-        clock.tick(30)
-        screen.fill((0, 0, 0))
+        screen.fill((255, 255, 255))
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()

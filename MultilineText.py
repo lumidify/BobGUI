@@ -55,6 +55,18 @@ class Line():
         self.text_splits = []
         self.offsets = []
         self.gen_surf()
+        self.wrap_text()
+        self.gen_offsets()
+    def delete_slice(self, start, end):
+        self.text = self.text[:start] + self.text[end:]
+    def insert(self, index, text):
+        self.text = self.text[:index] + text + self.text[index:]
+    def delete(self, index):
+        self.text = self.text[:index] + self.text[index + 1:]
+    def regenerate(self):
+        self.gen_surf()
+        self.wrap_text()
+        self.gen_offsets()
     def gen_offsets(self):
         self.offsets = []
         for split in self.text_splits:
@@ -88,6 +100,8 @@ class Line():
                 if self.size_list[split[0]] <= x <= self.size_list[split[1]]:
                     y_index = split_index
                     break
+            else:
+                y_index = 0
             y = y_index * self.parent.lineheight
             x -= self.size_list[self.text_splits[y_index][0]]
         else:
@@ -131,6 +145,7 @@ class Line():
             start += 1
         self.text_splits.append((start, len(self.text)))
     def gen_surf(self, startindex=0):
+        #TODO: Only rerender from startindex onwards
         #TODO: Maybe create separate functions for creating different effects
         #so that it is easy to add new effects.
         #FIXME: Underlines are currently broken when letter or word spacing is set.
@@ -145,18 +160,18 @@ class Line():
             for index, letter in enumerate(self.text):
                 if self.parent.shadow:
                     self.shadowsurf.blit(self.font.render(letter, self.parent.antialias, self.parent.shadow_color), (self.size_list[index], 0))
-                self.textsurf.blit(self.font.render(letter, self.parent.antialias, self.parent.color), (self.size_list[index], 0))
+                self.textsurf.blit(self.font.render(letter, self.parent.antialias, self.parent.text_color), (self.size_list[index], 0))
         elif self.parent.word_spacing:
             index = 0
             for word in split(self.text):
                 if self.parent.shadow:
                     self.shadowsurf.blit(self.font.render(word, self.parent.antialias, self.parent.shadow_color), (self.size_list[index], 0))
-                self.textsurf.blit(self.font.render(word, self.parent.antialias, self.parent.color), (self.size_list[index], 0))
+                self.textsurf.blit(self.font.render(word, self.parent.antialias, self.parent.text_color), (self.size_list[index], 0))
                 index += len(word)
         else:
             if self.parent.shadow:
                 self.shadowsurf.blit(self.font.render(self.text, self.parent.antialias, self.parent.shadow_color), (0, 0))
-            self.textsurf.blit(self.font.render(self.text, self.parent.antialias, self.parent.color), (0, 0))
+            self.textsurf.blit(self.font.render(self.text, self.parent.antialias, self.parent.text_color), (0, 0))
     def gen_size_list(self, startindex=0):
         extra = 0
         self.size_list = self.size_list[:startindex + 1]
@@ -192,7 +207,7 @@ class MultilineText():
         self.italic = kwargs.get("italic", False)
         self.bold = kwargs.get("bold", False)
         self.underline = kwargs.get("underline", False)
-        self.color = kwargs.get("color", (0, 0, 0))
+        self.text_color = kwargs.get("color", (0, 0, 0))
         self.letter_spacing = kwargs.get("letter_spacing", None)
         self.word_spacing = kwargs.get("word_spacing", None)
         self.font = kwargs.get("font", None)
@@ -211,12 +226,42 @@ class MultilineText():
         self.textsurface = pygame.surface.Surface(self.rect.size).convert_alpha()
         self.textsurface.fill((0, 0, 0, 0))
         self.final_lines = []
-        #TODO: Add special handler for empty lines so no extra processing power is used
-        #creating empty Line objects.
         for line in self.lines:
             self.final_lines.append(Line(self, text=line))
         self.gen_height_size_list()
         self.resize(self.rect.size)
+    def delete_slice(self, start, end):
+        if start[1] == end[1]:
+            self.final_lines[start[1]].delete_slice(start[0], end[0])
+            self.final_lines[start[1]].regenerate()
+        else:
+            text = self.final_lines[start[1]].text[:start[0]] + self.final_lines[end[1]].text[end[0]:]
+            self.final_lines[start[1]:end[1] + 1] = [Line(self, text=text)]
+        self.gen_height_size_list()
+    def split_line(self, pos):
+        text1 = self.final_lines[pos[1]].text[:pos[0]]
+        text2 = self.final_lines[pos[1]].text[pos[0]:]
+        self.final_lines[pos[1]] = Line(self, text=text1)
+        self.final_lines.insert(pos[1] + 1, Line(self, text=text2))
+        self.gen_height_size_list()
+    def join_lines(self, index1, index2):
+        text = self.final_lines[index1].text + self.final_lines[index2].text
+        self.final_lines[index1:index2 + 1] = [Line(self, text=text)]
+        self.gen_height_size_list()
+    def delete_line(self, index):
+        self.final_lines.pop(index)
+        self.gen_height_size_list()
+    def add_line(self, index):
+        self.final_lines.insert(index, Line(self, text=""))
+        self.gen_height_size_list()
+    def insert(self, pos, text):
+        self.final_lines[pos[1]].insert(pos[0], text)
+        self.final_lines[pos[1]].regenerate()
+        self.gen_height_size_list()
+    def delete(self, pos):
+        self.final_lines[pos[1]].delete(pos[0])
+        self.final_lines[pos[1]].regenerate()
+        self.gen_height_size_list()
     def load_font(self):
         try:
             self.font = pygame.font.Font(self.font, self.fontsize)
@@ -230,11 +275,13 @@ class MultilineText():
         for line in self.final_lines:
             self.height_size_list.append(self.height_size_list[-1] + line.get_full_height())
     def get_nearest_index(self, pos):
+        if pos[1] < 0:
+            return (0, 0)
         y = 0
         past_boundaries = False
         for index, height in enumerate(self.height_size_list):
             try:
-                if height <= pos[1] <= self.height_size_list[index + 1]:
+                if height <= pos[1] < self.height_size_list[index + 1]:
                     y = index
                     break
             except:

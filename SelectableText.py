@@ -30,29 +30,26 @@ from helper_functions import get_closest
 
 #FIXME: Selection currently lags considerably, presumably because the index-getting methods of the underlying text classes are quite slow.
 
-class SelectableText():
+class SelectableText(MultilineText):
     def __init__(self, screen, **kwargs):
-        self.screen = screen
-        self.text = MultilineText(screen, **kwargs)
-        self.rect = Rect(0, 0, kwargs.get("width", 0), kwargs.get("height", 0))
+        super().__init__(screen, **kwargs)
         self.x1 = None
         self.x2 = None
         self.y1 = None
         self.y2 = None
         self.pressed = False
-    def resize(self, size):
-        self.rect.size = size
-        self.text.resize(size)
     def update(self, event):
         mouse_pos = pygame.mouse.get_pos()
         collide_mouse = self.rect.collidepoint(mouse_pos)
         if event.type == MOUSEBUTTONDOWN and event.button == 1 and collide_mouse:
-            self.x1, self.y1 = self.x2, self.y2 = self.text.get_nearest_index(mouse_pos)
+            self.x1, self.y1 = self.x2, self.y2 = self.get_nearest_index(mouse_pos)
             self.pressed = True
         elif event.type == MOUSEMOTION and self.pressed and collide_mouse:
-            self.x2, self.y2 = self.text.get_nearest_index(mouse_pos)
+            self.x2, self.y2 = self.get_nearest_index(mouse_pos)
         elif event.type == MOUSEBUTTONUP and event.button == 1:
             if not self.pressed and not collide_mouse:
+                self.select_none()
+            if self.x1 == self.x2 and self.y1 == self.y2:
                 self.select_none()
             self.pressed = False
     def get_ordered_indeces(self):
@@ -66,29 +63,37 @@ class SelectableText():
                 temp_y1, temp_y2 = reversed([self.y1, self.y2])
                 temp_x1, temp_x2 = reversed([self.x1, self.x2])
             return (temp_x1, temp_y1), (temp_x2, temp_y2)
+    def delete_selection(self):
+        if not None in [self.x1, self.y1, self.x2, self.y2]:
+            indeces = self.get_ordered_indeces()
+            self.delete_slice(*indeces)
+            self.select_none()
+            return indeces[0]
+        else:
+            return False
     def select_none(self):
         self.x1 = self.y1 = self.x2 = self.y2 = None
     def draw(self):
         if not None in (self.x1, self.y1, self.x2, self.y2):
-            real_x1, real_y1 = self.text.get_index_pos((self.x1, self.y1))
-            real_x2, real_y2 = self.text.get_index_pos((self.x2, self.y2))
+            real_x1, real_y1 = self.get_index_pos((self.x1, self.y1))
+            real_x2, real_y2 = self.get_index_pos((self.x2, self.y2))
             if real_y1 == real_y2:
                 if real_x1 != real_x2:
                     real_x1, real_x2 = sorted((real_x1, real_x2))
-                    pygame.draw.rect(self.screen, (100, 200, 100), ((real_x1, real_y1), (real_x2 - real_x1, self.text.textheight)))
+                    pygame.draw.rect(self.screen, (100, 200, 100), ((real_x1, real_y1), (real_x2 - real_x1, self.textheight)))
             else:
                 if real_y1 > real_y2:
                     real_y1, real_y2 = reversed([real_y1, real_y2])
                     real_x1, real_x2 = reversed([real_x1, real_x2])
                 if self.rect.width - real_x1 > 0:
-                    pygame.draw.rect(self.screen, (100, 200, 100), (real_x1, real_y1, self.rect.width - real_x1, self.text.textheight))
-                if self.text.textheight != self.text.lineheight:
-                    pygame.draw.rect(self.screen, (100, 200, 100), (0, real_y1 + self.text.textheight, self.rect.width, self.text.lineheight - self.text.textheight))
-                if real_y2 - real_y1 > self.text.lineheight:
-                    pygame.draw.rect(self.screen, (100, 200, 100), (0, real_y1 + self.text.lineheight, self.rect.width, real_y2 - real_y1 - self.text.lineheight))
+                    pygame.draw.rect(self.screen, (100, 200, 100), (real_x1, real_y1, self.rect.width - real_x1, self.textheight))
+                if self.textheight != self.lineheight:
+                    pygame.draw.rect(self.screen, (100, 200, 100), (0, real_y1 + self.textheight, self.rect.width, self.lineheight - self.textheight))
+                if real_y2 - real_y1 > self.lineheight:
+                    pygame.draw.rect(self.screen, (100, 200, 100), (0, real_y1 + self.lineheight, self.rect.width, real_y2 - real_y1 - self.lineheight))
                 if real_x2 > 0:
-                    pygame.draw.rect(self.screen, (100, 200, 100), (0, real_y2, real_x2, self.text.textheight))
-        self.text.draw()
+                    pygame.draw.rect(self.screen, (100, 200, 100), (0, real_y2, real_x2, self.textheight))
+        super().draw()
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((0, 0), RESIZABLE)
