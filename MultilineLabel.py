@@ -1,5 +1,5 @@
 """
-This file is part of BobGUI
+BobGUI 1.0
 Copyright © 2016 Lumidify Productions
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -21,32 +21,27 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from bisect import bisect_left
+import os
+import sys
+import pygame
+from Widget import Widget
+from pygame.locals import *
+from MultilineText import MultilineText
 
-def split(text, delimiter=" "):
-    temp_list = []
-    final_list = []
-    for char in text:
-        if char == delimiter:
-            if "".join(temp_list) != "":
-                final_list.append("".join(temp_list))
-                temp_list = []
-            final_list.append(delimiter)
-        else:
-            temp_list.append(char)
-    if "".join(temp_list) != "":
-        final_list.append("".join(temp_list))
-    return final_list
-
-def get_closest(lst, num):
-    #Taken from: http://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
-    pos = bisect_left(lst, num)
-    if pos == 0:
-        return 0
-    if pos == len(lst):
-        return pos - 1
-    if lst[pos] - num < num - lst[pos - 1]:
-        return pos
-    else:
-        return pos - 1
-
+class Label(Widget):
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent)
+        self.rendered_text = MultilineText(self.screen, **kwargs)
+        self.padding = kwargs.get("padding", [0, 0, 0, 0])
+        self.text_width, self.text_height = max(line.size_list[-1] for line in self.rendered_text.final_lines), self.rendered_text.height_size_list[-1]
+        self.rect = Rect(0, 0, kwargs.get("width", self.text_width + self.padding[0] + self.padding[2]), kwargs.get("height", self.text_height + self.padding[1] + self.padding[3]))
+    def resize(self, **kwargs):
+        super().resize(**kwargs)
+        self.rendered_text.resize(self.rect.size)
+    def calculate_pos(self):
+        self.rendered_text.rect.topleft = self.rect.topleft
+    def update_screen(self, screen):
+        self.screen = screen
+        self.rendered_text.screen = screen
+    def draw(self):
+        self.rendered_text.draw()

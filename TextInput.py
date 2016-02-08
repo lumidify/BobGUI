@@ -64,9 +64,9 @@ class TextInput(SelectableText):
                     self.cursor.x_index -= 1
                     if self.cursor.x_index < 0:
                         if self.cursor.y_index > 0:
-                            self.delete_line(self.cursor.y_index)
                             self.cursor.y_index -= 1
                             self.cursor.x_index = len(self.final_lines[self.cursor.y_index].text)
+                            self.join_lines(self.cursor.y_index, self.cursor.y_index + 1)
                         else:
                             self.cursor.x_index = 0
                     else:

@@ -55,6 +55,7 @@ class GUI(Grid, Flow, Place):
             self.layout = Place
         self.fullscreen = kwargs.get("fullscreen", False)
         self.last_screen_size = self.rect.size
+        self.mods = {"LSHIFT": False, "RSHIFT": False, "LCTRL": False, "RCTRL": False, "LALT": False, "RALT": False, "LMETA": False, "RMETA": False, "LSUPER": False, "RSUPER": False}
     def toggle_fullscreen(self):
         pygame.display.quit()
         pygame.display.init()

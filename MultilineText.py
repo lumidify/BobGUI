@@ -27,7 +27,6 @@ import os
 import sys
 import pygame
 from pygame.locals import *
-from BasicText import BasicText
 from helper_functions import get_closest
 
 def split(text, delimiter=" "):
@@ -73,9 +72,9 @@ class Line():
             width = self.size_list[split[1]] - self.size_list[split[0]]
             extra = 0
             if self.parent.align == "center":
-                extra = (self.parent.rect.width - width) // 2
+                extra = (self.parent.inner_width - width) // 2
             elif self.parent.align == "right":
-                extra = self.parent.rect.width - width
+                extra = self.parent.inner_rect.width - width
             self.offsets.append(extra)
     def get_nearest_index(self, pos, y=0):
         if y <= 0:
@@ -127,7 +126,7 @@ class Line():
                 letter_index += len(word)
                 width_change = self.size_list[letter_index] - current_total_width
                 current_total_width += width_change
-                if current_width + width_change > self.parent.rect.width:
+                if current_width + width_change > self.parent.inner_width:
                     current_width = 0
                     #Skip over the spaces which are used for wrapping
                     #Otherwise the spaces which span over two lines would still be visible,
@@ -183,10 +182,7 @@ class Line():
                 extra += self.parent.word_spacing
             self.size_list.append(self.font.size(self.text[:index + startindex + 1])[0] + extra)
     def get_full_height(self):
-        if self.parent.wrap:
-            return self.parent.lineheight * len(self.text_splits)
-        else:
-            return self.parent.lineheight
+        return self.parent.lineheight * len(self.text_splits)
     def draw(self, screen, **kwargs):
         y = kwargs.get("y", 0)
         x = kwargs.get("x", 0)
@@ -223,13 +219,23 @@ class MultilineText():
         self.text = kwargs.get("text", "")
         self.lines = self.text.splitlines()
         self.rect = Rect(0, 0, kwargs.get("width", 0), kwargs.get("height", 0))
-        self.textsurface = pygame.surface.Surface(self.rect.size).convert_alpha()
-        self.textsurface.fill((0, 0, 0, 0))
+        self.padding = kwargs.get("padding", [0, 0, 0, 0])
+        self.calc_inner_size()
+        self.create_surface()
         self.final_lines = []
         for line in self.lines:
             self.final_lines.append(Line(self, text=line))
         self.gen_height_size_list()
-        self.resize(self.rect.size)
+    def calc_inner_size(self):
+        self.inner_width = self.rect.width - self.padding[0] - self.padding[2]
+        self.inner_height = self.rect.height - self.padding[1] - self.padding[3]
+        if self.inner_width < 0:
+            self.inner_width = 0
+        if self.inner_height < 0:
+            self.inner_height = 0
+    def create_surface(self):
+        self.textsurface = pygame.surface.Surface((self.inner_width, self.inner_height)).convert_alpha()
+        self.textsurface.fill((0, 0, 0, 0))
     def delete_slice(self, start, end):
         if start[1] == end[1]:
             self.final_lines[start[1]].delete_slice(start[0], end[0])
@@ -298,8 +304,8 @@ class MultilineText():
         return pos
     def resize(self, size):
         self.rect.size = size
-        self.textsurface = pygame.surface.Surface(size).convert_alpha()
-        self.textsurface.fill((0, 0, 0, 0))
+        self.calc_inner_size()
+        self.create_surface()
         for line in self.final_lines:
             line.resize()
         self.gen_height_size_list()
@@ -307,12 +313,12 @@ class MultilineText():
         self.textsurface.fill((0, 0, 0, 0))
         for index, line in enumerate(self.final_lines):
             y = self.height_size_list[index]
-            line.draw(self.textsurface, x=self.rect.x, y=y)
-        self.screen.blit(self.textsurface, self.rect)
+            line.draw(self.textsurface, x=0, y=y)
+        self.screen.blit(self.textsurface, (self.rect.x + self.padding[0], self.rect.y + self.padding[1]))
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((0, 0), RESIZABLE)
-    text = MultilineText(screen, text="Hello! This is an amazing demo.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", width=1000, height=700, wrap=True, font="liberationserif", align="center", shadow=True, fontsize=22, shadow_offsetx=2, shadow_offsety=2)
+    text = MultilineText(screen, text="Hello! This is an amazing demo.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", width=1000, height=700, wrap=True, font="liberationserif", align="center", shadow=True, fontsize=22, shadow_offsetx=2, shadow_offsety=2, padding=[10, 0, 20, 0])
     while True:
         screen.fill((255, 255, 255))
         for event in pygame.event.get():
