@@ -19,27 +19,11 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import os
-import sys
 import pygame
-from Widget import Widget
 from pygame.locals import *
-from MultilineText import MultilineText
 
-class Label(Widget):
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent)
-        self.rendered_text = MultilineText(self.screen, **kwargs)
-        self.padding = kwargs.get("padding", [0, 0, 0, 0])
-        self.text_width, self.text_height = max(line.size_list[-1] for line in self.rendered_text.final_lines), self.rendered_text.height_size_list[-1]
-        self.rect = Rect(0, 0, kwargs.get("width", self.text_width + self.padding[0] + self.padding[2]), kwargs.get("height", self.text_height + self.padding[1] + self.padding[3]))
-    def resize(self, **kwargs):
-        super().resize(**kwargs)
-        self.rendered_text.resize(self.rect.size)
-    def calculate_pos(self):
-        self.rendered_text.rect.topleft = self.rect.topleft
-    def update_screen(self, screen):
-        self.screen = screen
-        self.rendered_text.screen = screen
-    def draw(self):
-        self.rendered_text.draw()
+class AnimationManager():
+    def __init__(self):
+        """
+        Animation types: Fade - opacity or to new image, move - special slide effect?, follow path, scale, rotate
+        """
